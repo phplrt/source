@@ -12,8 +12,9 @@ declare(strict_types=1);
 namespace Phplrt\Source\Exception;
 
 /**
- * The exception that occurs in case of file access errors, like "Permission Denied".
+ * Interface SourceExceptionInterface
  */
-class NotAccessibleException extends \RuntimeException implements SourceExceptionInterface
+interface SourceExceptionInterface extends \Throwable
 {
+
 }
