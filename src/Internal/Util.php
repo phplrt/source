@@ -9,9 +9,13 @@
 
 declare(strict_types=1);
 
-namespace Phplrt\Source;
+namespace Phplrt\Source\Internal;
 
-final class StreamUtil
+/**
+ * @internal Util is an internal library class, please do not use it in your code.
+ * @psalm-internal Phplrt\Source
+ */
+final class Util
 {
     /**
      * @param resource $stream
