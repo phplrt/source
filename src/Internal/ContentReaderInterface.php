@@ -13,7 +13,7 @@ namespace Phplrt\Source\Internal;
 
 /**
  * @internal ContentReaderInterface is an internal library interface, please do not use it in your code.
- * @psalm-internal Phplrt\Source
+ * @psalm-internal Phplrt\source
  */
 interface ContentReaderInterface
 {

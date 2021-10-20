@@ -16,7 +16,7 @@ use Phplrt\Source\Internal\Util;
 
 /**
  * @internal StreamReader is an internal library class, please do not use it in your code.
- * @psalm-internal Phplrt\Source
+ * @psalm-internal Phplrt\source
  */
 final class StreamReader implements StreamReaderInterface
 {

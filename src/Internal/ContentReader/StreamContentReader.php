@@ -18,7 +18,7 @@ use Phplrt\Source\MemoizableInterface;
 
 /**
  * @internal StreamContentReader is an internal library class, please do not use it in your code.
- * @psalm-internal Phplrt\Source
+ * @psalm-internal Phplrt\source
  */
 final class StreamContentReader implements ContentReaderInterface, MemoizableInterface
 {

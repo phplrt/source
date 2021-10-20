@@ -15,7 +15,7 @@ use Phplrt\Source\Internal\ContentReaderInterface;
 
 /**
  * @internal ContentReader is an internal library class, please do not use it in your code.
- * @psalm-internal Phplrt\Source
+ * @psalm-internal Phplrt\source
  */
 final class ContentReader implements ContentReaderInterface
 {

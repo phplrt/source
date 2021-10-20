@@ -13,7 +13,7 @@ namespace Phplrt\Source\Internal;
 
 /**
  * @internal Util is an internal library class, please do not use it in your code.
- * @psalm-internal Phplrt\Source
+ * @psalm-internal Phplrt\source
  */
 final class Util
 {
