@@ -1,12 +1,5 @@
 <?php
 
-/**
- * This file is part of phplrt package.
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 declare(strict_types=1);
 
 namespace Phplrt\Source;
@@ -75,17 +68,11 @@ class File extends Readable implements FileInterface
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public function getPathname(): string
     {
         return $this->pathname;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     final public function getHash(): string
     {
         return \hash_file(static::HASH_ALGORITHM, $this->pathname);

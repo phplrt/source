@@ -1,12 +1,5 @@
 <?php
 
-/**
- * This file is part of phplrt package.
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 declare(strict_types=1);
 
 namespace Phplrt\Source\StreamReader;
@@ -65,7 +58,7 @@ class ContentStreamReader implements StreamReaderInterface
             throw new NotAccessibleException(self::ERROR_MEMORY_WRITING);
         }
 
-        if (@\rewind($memory) === false) {
+        if (!@\rewind($memory)) {
             throw new NotAccessibleException(self::ERROR_MEMORY_NON_REWINDABLE);
         }
 
