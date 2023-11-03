@@ -13,14 +13,8 @@ class FileStreamReader implements StreamReaderInterface
      */
     private const ERROR_NOT_READABLE = 'An error occurred while trying to open the file "%s" for reading';
 
-    /**
-     * @var string
-     */
     private string $pathname;
 
-    /**
-     * @param string $pathname
-     */
     public function __construct(string $pathname)
     {
         $this->pathname = $pathname;
@@ -33,7 +27,7 @@ class FileStreamReader implements StreamReaderInterface
     {
         $stream = @\fopen($this->pathname, 'rb');
 
-        if (! \is_resource($stream)) {
+        if (!\is_resource($stream)) {
             throw new NotReadableException(\sprintf(self::ERROR_NOT_READABLE, $this->pathname));
         }
 
