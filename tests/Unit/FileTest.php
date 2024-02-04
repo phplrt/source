@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Phplrt\Source\Tests;
+namespace Phplrt\Source\Tests\Unit;
 
-use PHPUnit\Framework\SkippedTestError;
 use Phplrt\Contracts\Source\FileInterface;
 use Phplrt\Contracts\Source\ReadableInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\ExpectationFailedException;
 
-class FileTestCase extends TestCase
+#[Group('phplrt/source'), Group('unit')]
+class FileTest extends TestCase
 {
     /**
-     * @dataProvider provider
-     *
-     * @param \Closure $factory
      * @throws ExpectationFailedException
      */
+    #[DataProvider('provider')]
     public function testSources(\Closure $factory): void
     {
         $readable = $factory();
@@ -25,11 +25,9 @@ class FileTestCase extends TestCase
     }
 
     /**
-     * @dataProvider provider
-     *
-     * @param \Closure $factory
      * @throws ExpectationFailedException
      */
+    #[DataProvider('provider')]
     public function testCloneable(\Closure $factory): void
     {
         $readable = $factory();
@@ -37,12 +35,7 @@ class FileTestCase extends TestCase
         $this->assertSame($this->getSources(), (clone $readable)->getContents());
     }
 
-    /**
-     * @dataProvider provider
-     *
-     * @param \Closure $factory
-     * @return void
-     */
+    #[DataProvider('provider')]
     public function testSerializable(\Closure $factory): void
     {
         $readable = $factory();
@@ -52,23 +45,17 @@ class FileTestCase extends TestCase
         $this->assertSame($this->getSources(), $unserialized->getContents());
     }
 
-    /**
-     * @return array
-     */
-    public function filesDataProvider(): array
+    public static function filesDataProvider(): array
     {
         $filter = fn(array $cb) => $cb[0]() instanceof FileInterface;
 
-        return \array_filter($this->provider(), $filter);
+        return \array_filter(self::provider(), $filter);
     }
 
     /**
-     * @dataProvider filesDataProvider
-     *
-     * @param \Closure $factory
      * @throws ExpectationFailedException
-     * @throws SkippedTestError
      */
+    #[DataProvider('filesDataProvider')]
     public function testPathname(\Closure $factory): void
     {
         /** @var ReadableInterface $readable */
@@ -81,10 +68,7 @@ class FileTestCase extends TestCase
         $this->assertSame($path, \unserialize(\serialize($readable))->getPathname());
     }
 
-    /**
-     * @return string
-     */
-    public function getPathname(): string
+    protected static function getPathname(): string
     {
         return __FILE__;
     }

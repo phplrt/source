@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Phplrt\Source\Tests;
+namespace Phplrt\Source\Tests\Unit;
 
-use Phplrt\Source\File;
+use Phplrt\Contracts\Source\SourceExceptionInterface;
 use Phplrt\Source\Exception\NotFoundException;
-use Phplrt\Source\Exception\NotReadableException;
+use Phplrt\Source\File;
+use PHPUnit\Framework\Attributes\Group;
 
-class ErrorsTestCase extends TestCase
+#[Group('phplrt/source'), Group('unit')]
+class ErrorsTest extends TestCase
 {
     /**
-     * @return void
-     * @throws NotReadableException
+     * @throws SourceExceptionInterface
      */
     public function testFileNotFound(): void
     {
@@ -24,10 +25,7 @@ class ErrorsTestCase extends TestCase
         File::fromPathname($file);
     }
 
-    /**
-     * @return string
-     */
-    protected function getPathname(): string
+    protected static function getPathname(): string
     {
         return __DIR__ . '/resources/example.txt';
     }
