@@ -2,21 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Phplrt\Source\Tests\Unit\Source;
+namespace Phplrt\Source\Tests\Unit;
 
 use Phplrt\Contracts\Source\FileInterface;
 use Phplrt\Contracts\Source\ReadableInterface;
-use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\ExpectationFailedException;
 
-#[Group('phplrt/source'), Group('unit')]
 class FileTest extends TestCase
 {
     /**
-     * @throws ExpectationFailedException
+     * @dataProvider provider
      */
-    #[DataProvider('provider')]
     public function testSources(\Closure $factory): void
     {
         $readable = $factory();
@@ -25,9 +20,8 @@ class FileTest extends TestCase
     }
 
     /**
-     * @throws ExpectationFailedException
+     * @dataProvider provider
      */
-    #[DataProvider('provider')]
     public function testCloneable(\Closure $factory): void
     {
         $readable = $factory();
@@ -35,7 +29,9 @@ class FileTest extends TestCase
         $this->assertSame($this->getSources(), (clone $readable)->getContents());
     }
 
-    #[DataProvider('provider')]
+    /**
+     * @dataProvider provider
+     */
     public function testSerializable(\Closure $factory): void
     {
         $readable = $factory();
@@ -49,13 +45,12 @@ class FileTest extends TestCase
     {
         $filter = fn(array $cb) => $cb[0]() instanceof FileInterface;
 
-        return \array_filter(self::provider(), $filter);
+        return \array_filter(static::provider(), $filter);
     }
 
     /**
-     * @throws ExpectationFailedException
+     * @dataProvider filesDataProvider
      */
-    #[DataProvider('filesDataProvider')]
     public function testPathname(\Closure $factory): void
     {
         /** @var ReadableInterface $readable */
@@ -68,7 +63,7 @@ class FileTest extends TestCase
         $this->assertSame($path, \unserialize(\serialize($readable))->getPathname());
     }
 
-    protected static function getPathname(): string
+    public static function getPathname(): string
     {
         return __FILE__;
     }
