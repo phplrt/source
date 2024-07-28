@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Phplrt\Source\Provider;
 
 use Phplrt\Contracts\Source\ReadableInterface;
+use Phplrt\Source\Exception\NotFoundException;
+use Phplrt\Source\Exception\NotReadableException;
+use Phplrt\Source\File;
 use Phplrt\Source\SourceFactory;
 use Psr\Http\Message\StreamInterface;
 
