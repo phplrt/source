@@ -9,15 +9,9 @@ use Phplrt\Source\SourceFactory;
 
 final class TextSourceProvider implements SourceProviderInterface
 {
-    /**
-     * @readonly
-     */
-    private SourceFactory $parent;
-
-    public function __construct(SourceFactory $parent)
-    {
-        $this->parent = $parent;
-    }
+    public function __construct(
+        private readonly SourceFactory $parent,
+    ) {}
 
     public function create(mixed $source): ?ReadableInterface
     {
