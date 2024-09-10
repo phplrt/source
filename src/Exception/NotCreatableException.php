@@ -18,11 +18,11 @@ class NotCreatableException extends NotAccessibleException
 
     protected const CODE_LAST = self::CODE_INVALID_TYPE;
 
-    public static function fromInvalidType(mixed $source): self
+    public static function fromInvalidType($source): self
     {
         $message = \vsprintf('Cannot create %s instance from %s', [
             ReadableInterface::class,
-            \get_debug_type($source),
+            \get_debug_type($source)
         ]);
 
         return new static($message, self::CODE_INVALID_TYPE);

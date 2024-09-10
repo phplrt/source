@@ -9,11 +9,17 @@ use Phplrt\Source\SourceFactory;
 
 final class StreamSourceProvider implements SourceProviderInterface
 {
-    public function __construct(
-        private readonly SourceFactory $parent,
-    ) {}
+    /**
+     * @readonly
+     */
+    private SourceFactory $parent;
 
-    public function create(mixed $source): ?ReadableInterface
+    public function __construct(SourceFactory $parent)
+    {
+        $this->parent = $parent;
+    }
+
+    public function create($source): ?ReadableInterface
     {
         if (!\is_resource($source)) {
             return null;
