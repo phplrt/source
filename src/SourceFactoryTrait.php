@@ -32,10 +32,8 @@ trait SourceFactoryTrait
      *         : ReadableInterface)
      * )
      * @throws SourceExceptionInterface
-     *
-     * @psalm-suppress NoValue : Allow any value
      */
-    public static function new($source): ReadableInterface
+    public static function new(mixed $source): ReadableInterface
     {
         if ($source instanceof StreamInterface) {
             return static::fromPsrStream($source);
@@ -117,7 +115,7 @@ trait SourceFactoryTrait
         trigger_deprecation('phplrt/source', '3.4', <<<'MSG'
             Using "%s::fromPsrStream($stream)" with %s argument is deprecated,
             use "%1$s::fromResource($stream->detach())" instead.
-            MSG, static::class, \get_class($stream));
+            MSG, static::class, $stream::class);
 
         return static::fromResource($stream->detach(), $pathname);
     }
@@ -129,7 +127,7 @@ trait SourceFactoryTrait
      * @return ($pathname is null ? ReadableInterface : FileInterface)
      * @throws SourceExceptionInterface
      */
-    public static function fromResource($resource, ?string $pathname = null): ReadableInterface
+    public static function fromResource(mixed $resource, ?string $pathname = null): ReadableInterface
     {
         $factory = static::getSourceFactory();
 
