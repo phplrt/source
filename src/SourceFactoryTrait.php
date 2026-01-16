@@ -8,7 +8,6 @@ use Phplrt\Contracts\Source\FileInterface;
 use Phplrt\Contracts\Source\ReadableInterface;
 use Phplrt\Contracts\Source\SourceExceptionInterface;
 use Phplrt\Contracts\Source\SourceFactoryInterface;
-use Psr\Http\Message\StreamInterface;
 
 trait SourceFactoryTrait
 {
@@ -32,13 +31,11 @@ trait SourceFactoryTrait
      *         : ReadableInterface)
      * )
      * @throws SourceExceptionInterface
+     *
+     * @psalm-suppress NoValue : Allow any value
      */
     public static function new(mixed $source): ReadableInterface
     {
-        if ($source instanceof StreamInterface) {
-            return static::fromPsrStream($source);
-        }
-
         $factory = self::getSourceFactory();
 
         return $factory->create($source);
@@ -49,7 +46,6 @@ trait SourceFactoryTrait
      * @param non-empty-string|null $pathname
      *
      * @return ($pathname is null ? ReadableInterface : FileInterface)
-     * @throws SourceExceptionInterface
      */
     public static function empty(?string $pathname = null): ReadableInterface
     {
@@ -61,7 +57,6 @@ trait SourceFactoryTrait
      * @param non-empty-string|null $pathname
      *
      * @return ($pathname is null ? ReadableInterface : FileInterface)
-     * @throws SourceExceptionInterface
      */
     public static function fromSources(string $sources, ?string $pathname = null): ReadableInterface
     {
@@ -100,24 +95,6 @@ trait SourceFactoryTrait
         }
 
         return new File($pathname);
-    }
-
-    /**
-     * @param non-empty-string|null $pathname
-     *
-     * @return ($pathname is null ? ReadableInterface : FileInterface)
-     * @throws SourceExceptionInterface
-     *
-     * @deprecated since phplrt 3.4 and will be removed in 4.0, use {@see fromResource()} instead.
-     */
-    public static function fromPsrStream(StreamInterface $stream, ?string $pathname = null): ReadableInterface
-    {
-        trigger_deprecation('phplrt/source', '3.4', <<<'MSG'
-            Using "%s::fromPsrStream($stream)" with %s argument is deprecated,
-            use "%1$s::fromResource($stream->detach())" instead.
-            MSG, static::class, $stream::class);
-
-        return static::fromResource($stream->detach(), $pathname);
     }
 
     /**

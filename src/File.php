@@ -11,36 +11,54 @@ use Phplrt\Source\Exception\NotReadableException;
 class File extends Readable implements FileInterface
 {
     /**
+     * @var non-empty-string
+     *
+     * @psalm-readonly-allow-private-mutation
+     */
+    private string $filename;
+
+    /**
+     * @var non-empty-string
+     *
+     * @psalm-readonly-allow-private-mutation
+     */
+    private string $algo = SourceFactory::DEFAULT_HASH_ALGO;
+
+    /**
+     * @var int<1, max>
+     *
+     * @psalm-readonly-allow-private-mutation
+     */
+    private int $chunkSize = SourceFactory::DEFAULT_CHUNK_SIZE;
+
+    /**
      * @psalm-taint-sink file $filename
+     * @param non-empty-string $filename
+     * @param non-empty-string $algo hashing algorithm for the source
+     * @param int<1, max> $chunkSize the chunk size used while non-blocking
+     *        reading the file inside the {@see \Fiber}
      */
     public function __construct(
-        /**
-         * @var non-empty-string
-         */
-        private readonly string $filename,
-        /**
-         * Hashing algorithm for the source.
-         *
-         * @var non-empty-string
-         */
-        private readonly string $algo = SourceFactory::DEFAULT_HASH_ALGO,
-        /**
-         * The chunk size used while non-blocking reading the file inside
-         * the {@see \Fiber}.
-         *
-         * @var int<1, max>
-         */
-        private readonly int $chunkSize = SourceFactory::DEFAULT_CHUNK_SIZE,
+        string $filename,
+        string $algo = SourceFactory::DEFAULT_HASH_ALGO,
+        int $chunkSize = SourceFactory::DEFAULT_CHUNK_SIZE
     ) {
         assert($filename !== '', 'Filename must not be empty');
         assert($algo !== '', 'Hashing algorithm name must not be empty');
         assert($chunkSize >= 1, 'Chunk size must be greater than 0');
+
+        $this->chunkSize = $chunkSize;
+        $this->algo = $algo;
+        $this->filename = $filename;
     }
 
     public function getContents(): string
     {
         try {
-            if (\Fiber::getCurrent() !== null) {
+            if (\PHP_MAJOR_VERSION >= 8
+                && \PHP_MINOR_VERSION >= 1
+                && \Fiber::getCurrent() !== null
+            ) {
                 return $this->asyncGetContents();
             }
 
@@ -93,7 +111,7 @@ class File extends Readable implements FileInterface
     /**
      * @throws NotReadableException
      */
-    public function getStream(): mixed
+    public function getStream()
     {
         $stream = \fopen($this->filename, 'rb');
 

@@ -19,29 +19,41 @@ class Source extends Readable implements PreferContentReadingInterface
     /**
      * @var resource|null
      */
-    private mixed $stream = null;
+    private $stream;
+
+    /**
+     * @var non-empty-string
+     *
+     * @psalm-readonly-allow-private-mutation
+     */
+    private string $algo = SourceFactory::DEFAULT_HASH_ALGO;
+
+    /**
+     * @var non-empty-string
+     *
+     * @psalm-readonly-allow-private-mutation
+     */
+    private string $temp = SourceFactory::DEFAULT_TEMP_STREAM;
 
     /**
      * @psalm-taint-sink file $temp
+     * @param non-empty-string $algo hashing algorithm for the source
+     * @param non-empty-string $temp the name of the temporary stream, which is
+     *        used as a resource during the reading of the source
      */
     public function __construct(
-        private readonly string $content,
         /**
-         * Hashing algorithm for the source.
-         *
-         * @var non-empty-string
+         * @psalm-readonly-allow-private-mutation
          */
-        private readonly string $algo = SourceFactory::DEFAULT_HASH_ALGO,
-        /**
-         * The name of the temporary stream, which is used as a resource during
-         * the reading of the source.
-         *
-         * @var non-empty-string
-         */
-        private readonly string $temp = SourceFactory::DEFAULT_TEMP_STREAM
+        private string $content,
+        string $algo = SourceFactory::DEFAULT_HASH_ALGO,
+        string $temp = SourceFactory::DEFAULT_TEMP_STREAM
     ) {
         assert($algo !== '', 'Hashing algorithm name must not be empty');
         assert($temp !== '', 'Temporary stream name must not be empty');
+
+        $this->temp = $temp;
+        $this->algo = $algo;
     }
 
     public function getContents(): string
@@ -52,7 +64,7 @@ class Source extends Readable implements PreferContentReadingInterface
     /**
      * @throws NotAccessibleException
      */
-    public function getStream(): mixed
+    public function getStream()
     {
         if (!\is_resource($this->stream)) {
             $this->stream = \fopen($this->temp, 'rb+');
