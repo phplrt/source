@@ -4,169 +4,210 @@ declare(strict_types=1);
 
 namespace Phplrt\Source;
 
-use Phplrt\Contracts\Source\SourceExceptionInterface;
-use Phplrt\Source\Exception\HashCalculationException;
+use Phplrt\Source\Exception\NotAccessibleException;
 use Phplrt\Source\Exception\NotReadableException;
+use Phplrt\Source\Hash\HasherInterface;
 
+/**
+ * Implementing a readable object that references to a resource stream
+ *
+ * @phpstan-type StreamMetaType array{
+ *     timed_out: bool,
+ *     blocked: bool,
+ *     eof: bool,
+ *     unread_bytes: int,
+ *     stream_type: string,
+ *     wrapper_type: string,
+ *     wrapper_data: mixed,
+ *     mode: string,
+ *     seekable: bool,
+ *     uri?: string,
+ *     ...
+ * }
+ */
 class Stream extends Readable
 {
+    public string $content {
+        /**
+         * @throws NotReadableException When the stream cannot be read
+         */
+        get {
+            \error_clear_last();
+
+            $result = @\stream_get_contents($this->stream);
+
+            if ($result === false) {
+                throw NotReadableException::becauseInternalErrorOccurs(\error_get_last());
+            }
+
+            return $result;
+        }
+    }
+
+    public string $hash {
+        get {
+            // In the case that the stream is a link to a local file, we can
+            // speed up hash generation using the low-level hashing API.
+            if ($this->isLocal && $this->uri !== null) {
+                return $this->hash ??= $this->hasher->file($this->uri);
+            }
+
+            return $this->hash ??= $this->hasher->content($this->content);
+        }
+    }
+
     /**
-     * Initial offset of the stream to return to the specified offset after
-     * reading the data.
+     * Gets stream URI string (can be optional)
+     *
+     * @var non-empty-string|null
+     */
+    public readonly ?string $uri;
+
+    /**
+     * Gets the stream access mode (e.g., "rb", "rb+", "w", etc.)
+     *
+     * @var non-empty-string
+     */
+    public readonly string $mode;
+
+    /**
+     * Gets {@see true} if the stream is local
+     */
+    public readonly bool $isLocal;
+
+    /**
+     * Gets the current offset position in the stream
      *
      * @var int<0, max>
      */
-    private readonly int $offset;
+    public int $offset {
+        /** @phpstan-ignore-next-line : False-positive, offset cannot be negative */
+        get => (int) \ftell($this->stream);
+    }
 
+    /**
+     * @param resource $stream The resource stream
+     */
     public function __construct(
-        /**
-         * @var resource
-         */
-        private readonly mixed $stream,
-        /**
-         * Hashing algorithm for the source.
-         *
-         * @var non-empty-string
-         */
-        private readonly string $algo = SourceFactory::DEFAULT_HASH_ALGO,
-        /**
-         * The chunk size used while non-blocking reading the file inside
-         * the {@see \Fiber}.
-         *
-         * @var int<1, max>
-         */
-        private readonly int $chunkSize = SourceFactory::DEFAULT_CHUNK_SIZE
+        public readonly mixed $stream,
+        HasherInterface $hasher,
     ) {
-        assert(\is_resource($stream), 'Stream argument must be a valid resource stream');
-        assert($algo !== '', 'Hashing algorithm name must not be empty');
-        assert($chunkSize >= 1, 'Chunk size must be greater than 0');
+        parent::__construct($hasher);
 
-        $this->offset = (int) \ftell($stream);
-    }
+        $metadata = \stream_get_meta_data($stream);
 
-    public function getContents(): string
-    {
-        try {
-            if (\Fiber::getCurrent() !== null) {
-                return $this->asyncGetContents();
-            }
-
-            return $this->syncGetContents();
-        } catch (\Throwable $e) {
-            throw NotReadableException::fromInternalStreamError($e);
-        }
+        $this->uri = $this->findUriFromMetadata($metadata);
+        $this->mode = $this->getModeFromMetadata($metadata);
+        $this->isLocal = $this->getIsLocalInfoFromMetadata($metadata);
     }
 
     /**
-     * @throws \Throwable
+     * Extracts "local" bool flag stream information from metadata
+     *
+     * @param StreamMetaType $metadata Stream metadata array
+     *
+     * @return bool {@see true} if the stream is local, {@see false} otherwise
      */
-    private function asyncGetContents(): string
+    private function getIsLocalInfoFromMetadata(array $metadata): bool
     {
-        \stream_set_blocking($this->stream, false);
-        \flock($this->stream, \LOCK_SH);
-
-        \Fiber::suspend();
-        $buffer = '';
-
-        while (!\feof($this->stream)) {
-            $buffer .= \fread($this->stream, $this->chunkSize);
-
-            \Fiber::suspend();
-        }
-
-        \flock($this->stream, \LOCK_UN);
-        \fseek($this->stream, $this->offset);
-
-        return $buffer;
+        return isset($metadata['uri'])
+            && \stream_is_local($metadata['uri']);
     }
 
     /**
-     * @throws \ErrorException
+     * Extracts stream mode from metadata
+     *
+     * @param StreamMetaType $metadata Stream metadata array
+     *
+     * @return non-empty-string The stream access mode
      */
-    private function syncGetContents(): string
+    private function getModeFromMetadata(array $metadata): string
     {
-        \error_clear_last();
+        $mode = $metadata['mode'];
 
-        $result = @\stream_get_contents($this->stream);
-
-        if ($result === false) {
-            throw NotReadableException::createFromLastInternalError();
+        if ($mode === '') {
+            return 'rb';
         }
 
-        return $result;
-    }
-
-    public function getStream(): mixed
-    {
-        return $this->stream;
+        return $mode;
     }
 
     /**
-     * @throws HashCalculationException
-     * @throws SourceExceptionInterface
+     * Extracts stream URI from metadata
+     *
+     * @param StreamMetaType $metadata Stream metadata array
+     *
+     * @return non-empty-string|null The stream URI or {@see null} if not available
      */
-    public function getHash(): string
+    private function findUriFromMetadata(array $metadata): ?string
     {
-        try {
-            $metadata = \stream_get_meta_data($this->stream);
+        $uri = $metadata['uri'] ?? null;
 
-            // In the case that the stream is a link to a local file, we can
-            // speed up hash generation using the low-level hashing API.
-            if (\stream_is_local($metadata['uri'])) {
-                return \hash_file($this->algo, $metadata['uri']);
-            }
-
-            return \hash($this->algo, $this->getContents());
-        } catch (\ValueError $e) {
-            throw HashCalculationException::fromInvalidHashAlgo($this->algo, $e);
+        if ($uri === null || $uri === '') {
+            return null;
         }
+
+        return $uri;
     }
 
     /**
-     * @return array<non-empty-string, mixed>
+     * Serializes the stream object
+     *
+     * @return array{
+     *     uri: ?non-empty-string,
+     *     mode: non-empty-string,
+     *     seek: int<0, max>,
+     *     hasher: HasherInterface,
+     * }
+     * @throws \LogicException When the stream does not have a URI
      */
     public function __serialize(): array
     {
-        \error_clear_last();
-
-        $meta = @\stream_get_meta_data($this->stream);
-
-        if (\error_get_last() !== null) {
-            return [];
+        if ($this->uri === null) {
+            throw new \LogicException('Could not serialize stream without URI');
         }
 
         return [
-            'uri' => $meta['uri'],
-            'mode' => $meta['mode'],
+            'uri' => $this->uri,
+            'mode' => $this->mode,
             'seek' => $this->offset,
-            'algo' => $this->algo,
-            'chunk' => $this->chunkSize,
+            'hasher' => $this->hasher,
         ];
     }
 
     /**
-     * @param array<non-empty-string, mixed> $data
+     * Unserializes the stream object
      *
-     * @throws \ErrorException
+     * @param array{
+     *     uri: non-empty-string,
+     *     mode: non-empty-string,
+     *     seek: int<0, max>,
+     *     hasher: HasherInterface,
+     *     ...
+     * } $data
+     *
+     * @throws NotReadableException When the stream cannot be opened
+     * @throws NotAccessibleException When the stream is not seekable
      */
     public function __unserialize(array $data): void
     {
-        $this->algo = (string) ($data['algo'] ?? SourceFactory::DEFAULT_HASH_ALGO);
-        $this->chunkSize = \max(1, (int) ($data['chunk'] ?? SourceFactory::DEFAULT_CHUNK_SIZE));
-        $this->offset = \max(0, (int) ($data['seek'] ?? 0));
-
         \error_clear_last();
 
-        $stream = @\fopen(
-            $data['uri'] ?? 'php://memory',
-            $data['mode'] ?? 'rb',
-        );
+        $this->hasher = $data['hasher'];
+        $this->isLocal = \stream_is_local($data['uri']);
+        $this->mode = $data['mode'];
+        $this->uri = $data['uri'];
+
+        $stream = @\fopen($this->uri, $this->mode);
 
         if ($stream === false) {
-            throw NotReadableException::createFromLastInternalError();
+            throw NotReadableException::becauseInternalErrorOccurs(\error_get_last());
+        }
+
+        if (\fseek($stream, $data['seek']) === -1) {
+            throw NotAccessibleException::becauseStreamIsNotSeekable($this->uri);
         }
 
         $this->stream = $stream;
-        \fseek($this->stream, $this->offset);
     }
 }

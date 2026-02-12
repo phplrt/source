@@ -4,27 +4,42 @@ declare(strict_types=1);
 
 namespace Phplrt\Source\Exception;
 
+use Phplrt\Contracts\Source\Exception\SourceCreationExceptionInterface;
 use Phplrt\Contracts\Source\ReadableInterface;
 
 /**
- * Error that occurs when a {@see ReadableInterface} object cannot be created.
+ * Error that occurs when a {@see ReadableInterface} object cannot be created
  */
-class NotCreatableException extends NotAccessibleException
+class NotCreatableException extends NotAccessibleException implements
+    SourceCreationExceptionInterface
 {
+    final public const int CODE_INVALID_TYPE = 0x01;
+    final public const int CODE_UNSUPPORTED_TYPE = 0x02;
+
     /**
-     * @final
+     * @param non-empty-string $expected
      */
-    public const CODE_INVALID_TYPE = 0x01 + parent::CODE_LAST;
-
-    protected const CODE_LAST = self::CODE_INVALID_TYPE;
-
-    public static function fromInvalidType(mixed $source): self
+    public static function becauseSourceIs(mixed $source, string $expected, ?\Throwable $prev = null): self
     {
-        $message = \vsprintf('Cannot create %s instance from %s', [
-            ReadableInterface::class,
-            \get_debug_type($source),
-        ]);
+        /** @phpstan-ignore-next-line : False-positive, get_debug_type returns non-empty string */
+        return self::becauseSourceIsTypeOf(\get_debug_type($source), $expected, $prev);
+    }
 
-        return new static($message, self::CODE_INVALID_TYPE);
+    /**
+     * @param non-empty-string $actual
+     * @param non-empty-string $expected
+     */
+    public static function becauseSourceIsTypeOf(string $actual, string $expected, ?\Throwable $prev = null): self
+    {
+        $message = \sprintf('Cannot create source instance from %s, expected %s', $actual, $expected);
+
+        return new self($message, self::CODE_INVALID_TYPE, $prev);
+    }
+
+    public static function becauseSourceIsUnsupported(mixed $source, ?\Throwable $prev = null): self
+    {
+        $message = \sprintf('Cannot create source instance from %s, no suitable driver found', \get_debug_type($source));
+
+        return new self($message, self::CODE_UNSUPPORTED_TYPE, $prev);
     }
 }

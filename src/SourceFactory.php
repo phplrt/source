@@ -4,171 +4,86 @@ declare(strict_types=1);
 
 namespace Phplrt\Source;
 
-use Phplrt\Contracts\Source\FileInterface;
+use Phplrt\Contracts\Source\Factory\SourceFactoryInterface;
 use Phplrt\Contracts\Source\ReadableInterface;
-use Phplrt\Contracts\Source\SourceFactoryInterface;
 use Phplrt\Source\Exception\NotCreatableException;
-use Phplrt\Source\Exception\NotFoundException;
-use Phplrt\Source\Exception\NotReadableException;
-use Phplrt\Source\Provider\PsrStreamSourceProvider;
-use Phplrt\Source\Provider\SourceProviderInterface;
-use Phplrt\Source\Provider\SplFileInfoSourceProvider;
-use Phplrt\Source\Provider\StreamSourceProvider;
-use Phplrt\Source\Provider\TextSourceProvider;
+use Phplrt\Source\Factory\FileSourceFactory;
+use Phplrt\Source\Factory\StreamSourceFactory;
+use Phplrt\Source\Factory\StringSourceFactory;
 
+/**
+ * @template-implements SourceFactoryInterface<mixed>
+ */
 final class SourceFactory implements SourceFactoryInterface
 {
     /**
-     * Default chunk size value.
-     *
-     * @var int<1, max>
+     * Contains default factory implementation
      */
-    public const DEFAULT_CHUNK_SIZE = 65536;
+    private static self $default;
 
     /**
-     * Default hashing algorithm value.
-     *
-     * @var non-empty-string
+     * @var list<SourceFactoryInterface>
      */
-    public const DEFAULT_HASH_ALGO = 'md5';
+    private iterable $factories {
+        get {
+            /** @phpstan-ignore-next-line : false-positive */
+            if (\is_array($this->factories) && \array_is_list($this->factories)) {
+                return $this->factories;
+            }
 
-    /**
-     * Default name of the temporary streams.
-     *
-     * @var non-empty-string
-     */
-    public const DEFAULT_TEMP_STREAM = 'php://memory';
+            /** @phpstan-ignore-next-line : false-positive */
+            return $this->factories = \iterator_to_array($this->factories, false);
+        }
+    }
 
-    /**
-     * @var list<SourceProviderInterface>
-     */
-    private array $providers = [];
-
-    /**
-     * @param list<SourceProviderInterface> $providers list of source providers
-     */
-    public function __construct(
-        /**
-         * Hashing algorithm for the sources.
-         *
-         * @var non-empty-string
-         */
-        public readonly string $algo = self::DEFAULT_HASH_ALGO,
-        /**
-         * The name of the temporary stream, which is used as a resource
-         * during the reading of the source.
-         *
-         * @var non-empty-string
-         */
-        public readonly string $temp = self::DEFAULT_TEMP_STREAM,
-        /**
-         * The chunk size used while non-blocking reading the file
-         * inside the {@see \Fiber} context.
-         *
-         * @var int<1, max>
-         */
-        public readonly int $chunkSize = self::DEFAULT_CHUNK_SIZE,
-        iterable $providers = []
-    ) {
-        assert($algo !== '', 'Hashing algorithm name must not be empty');
-        assert($temp !== '', 'Temporary stream name must not be empty');
-        assert($chunkSize >= 1, 'Chunk size must be greater than 0');
-
-        $this->providers = [
-            ...$providers,
-            new PsrStreamSourceProvider($this),
-            new SplFileInfoSourceProvider($this),
-            new StreamSourceProvider($this),
-            new TextSourceProvider($this),
-        ];
+    public static function default(): self
+    {
+        return self::$default ??= new self([
+            new StringSourceFactory(),
+            new FileSourceFactory(),
+            new StreamSourceFactory(),
+        ]);
     }
 
     /**
-     * Appends a new provider to the END of providers list.
-     *
-     * @psalm-immutable
+     * @param iterable<mixed, SourceFactoryInterface> $factories
      */
-    public function withAppendedProvider(SourceProviderInterface $provider): self
+    public function __construct(iterable $factories = [])
     {
-        $self = clone $this;
-        $self->providers[] = $provider;
-
-        return $self;
+        $this->factories = \iterator_to_array($factories, false);
     }
 
     /**
-     * Prepends a new provider to the START of providers list.
-     *
-     * @psalm-immutable
+     * @return SourceFactoryInterface<mixed>|null
      */
-    public function withPrependedProvider(SourceProviderInterface $provider): self
+    private function select(mixed $source): ?SourceFactoryInterface
     {
-        $self = clone $this;
-        $self->providers = [$provider, ...$this->providers];
-
-        return $self;
-    }
-
-    public function create(mixed $source): ReadableInterface
-    {
-        foreach ($this->providers as $provider) {
-            $readable = $provider->create($source);
-
-            if ($readable instanceof ReadableInterface) {
-                return $readable;
+        foreach ($this->factories as $factory) {
+            if ($factory->supports($source)) {
+                return $factory;
             }
         }
 
+        return null;
+    }
+
+    public function supports(mixed $source): bool
+    {
+        return $this->select($source) !== null;
+    }
+
+    public function create(mixed $source, ?string $virtualPathname = null): ReadableInterface
+    {
         if ($source instanceof ReadableInterface) {
             return $source;
         }
 
-        throw NotCreatableException::fromInvalidType($source);
-    }
+        $factory = $this->select($source);
 
-    public function createFromString(string $content = '', ?string $name = null): ReadableInterface
-    {
-        assert($name !== '', 'Name must not be empty');
-
-        if ($name === null) {
-            return new Source($content, $this->algo, $this->temp);
+        if ($factory === null) {
+            throw NotCreatableException::becauseSourceIsUnsupported($source);
         }
 
-        return new VirtualFile($name, $content, $this->algo, $this->temp);
-    }
-
-    public function createFromFile(string $filename): FileInterface
-    {
-        if (!\is_file($filename)) {
-            throw NotFoundException::fromInvalidPathname($filename);
-        }
-
-        if (!\is_readable($filename)) {
-            throw NotReadableException::fromOpeningFile($filename);
-        }
-
-        return new File($filename, $this->algo, $this->chunkSize);
-    }
-
-    /**
-     * @throws NotReadableException
-     */
-    public function createFromStream(mixed $stream, ?string $name = null): ReadableInterface
-    {
-        assert($name !== '', 'Name must not be empty');
-
-        if (!\is_resource($stream)) {
-            throw NotReadableException::fromInvalidResource($stream);
-        }
-
-        if (\get_resource_type($stream) !== 'stream') {
-            throw NotReadableException::fromInvalidStream($stream);
-        }
-
-        if ($name === null) {
-            return new Stream($stream, $this->algo, $this->chunkSize);
-        }
-
-        return new VirtualStreamingFile($name, $stream, $this->algo, $this->chunkSize);
+        return $factory->create($source, $virtualPathname);
     }
 }

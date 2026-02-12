@@ -9,23 +9,16 @@ namespace Phplrt\Source\Exception;
  */
 class NotFoundException extends NotReadableException
 {
-    /**
-     * @final
-     */
-    public const CODE_NOT_FOUND = 0x01 + parent::CODE_LAST;
-
-    protected const CODE_LAST = self::CODE_NOT_FOUND + parent::CODE_LAST;
+    final public const int CODE_FILE_NOT_FOUND = 0x01;
 
     /**
      * @psalm-taint-sink file $pathname
      * @param non-empty-string $pathname
-     *
-     * @return static
      */
-    public static function fromInvalidPathname(string $pathname): self
+    public static function becauseFileNotFound(string $pathname): self
     {
         $message = 'File "%s" not found';
 
-        return new static(\sprintf($message, $pathname), self::CODE_NOT_FOUND);
+        return new static(\sprintf($message, $pathname), self::CODE_FILE_NOT_FOUND);
     }
 }

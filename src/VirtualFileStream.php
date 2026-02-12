@@ -9,9 +9,9 @@ use Phplrt\Source\Hash\HasherInterface;
 
 /**
  * Implementing a readable object that references a virtual (non-real)
- * file with predefined content string
+ * file with a predefined content stream
  */
-class VirtualFile extends Source implements FileInterface
+class VirtualFileStream extends Stream implements FileInterface
 {
     public function __construct(
         /**
@@ -20,9 +20,9 @@ class VirtualFile extends Source implements FileInterface
          * @var non-empty-string
          */
         public readonly string $pathname,
-        string $content,
+        mixed $stream,
         HasherInterface $hasher,
     ) {
-        parent::__construct($content, $hasher);
+        parent::__construct($stream, $hasher);
     }
 }
