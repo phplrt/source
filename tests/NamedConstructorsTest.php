@@ -39,7 +39,6 @@ final class NamedConstructorsTest extends TestCase
         $source = StringSource::createFromString('test content');
 
         self::assertSame('test content', $source->content);
-        self::assertSame(12, $source->size);
     }
 
     public function testEmptyStringSource(): void
@@ -47,7 +46,6 @@ final class NamedConstructorsTest extends TestCase
         $source = StringSource::createEmpty();
 
         self::assertSame('', $source->content);
-        self::assertSame(0, $source->size);
     }
 
     public function testResourceSourceFromResource(): void
@@ -92,7 +90,6 @@ final class NamedConstructorsTest extends TestCase
 
         self::assertSame('virtual.txt', $source->pathname);
         self::assertSame('', $source->content);
-        self::assertTrue($source->isEof);
     }
 
     public function testVirtualSourceFromResourceStream(): void
@@ -119,6 +116,5 @@ final class NamedConstructorsTest extends TestCase
 
         self::assertSame($this->temp, $source->pathname);
         self::assertSame('test content', $source->content);
-        self::assertSame(12, $source->size);
     }
 }

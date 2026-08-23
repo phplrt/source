@@ -24,17 +24,14 @@ final class VirtualSourceTest extends TestCase
         $source = new VirtualSource('virtual/file.php', new StringSource('test content'));
 
         self::assertSame('test content', $source->content);
-        self::assertSame(12, $source->size);
     }
 
     public function testReadsThroughTheSourceItWraps(): void
     {
         $source = new VirtualSource('virtual/file.php', new StringSource('test content'));
 
-        self::assertSame(0, $source->offset);
-        self::assertSame('test content', $source->read(1024));
-        self::assertSame(12, $source->offset);
-        self::assertTrue($source->isEof);
+        self::assertSame('test content', $source->read(0, 1024));
+        self::assertSame('content', $source->read(5, 1024));
     }
 
     public function testWrapsAFileOfItsOwn(): void
@@ -49,20 +46,6 @@ final class VirtualSourceTest extends TestCase
         // The pathname is virtual, while everything read comes from the file
         self::assertSame('virtual/file.php', $source->pathname);
         self::assertSame('test content', $source->content);
-        self::assertSame(12, $source->size);
-    }
-
-    public function testSizeIsUnknownWhenTheSourceCannotTellIt(): void
-    {
-        $stream = $this->createNonSeekableResource('test content');
-
-        try {
-            $source = new VirtualSource('virtual/file.php', new ResourceSource($stream));
-
-            self::assertNull($source->size);
-        } finally {
-            \fclose($stream);
-        }
     }
 
     public function testWrapsAnotherVirtualFile(): void
@@ -82,7 +65,6 @@ final class VirtualSourceTest extends TestCase
         $source = new VirtualSource('virtual/file.php', new StringSource());
 
         self::assertSame('', $source->content);
-        self::assertSame(0, $source->size);
-        self::assertTrue($source->isEof);
+        self::assertSame('', $source->read(0, 1024));
     }
 }

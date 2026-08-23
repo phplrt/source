@@ -26,43 +26,6 @@ class VirtualSource extends Readable implements FileInterface
         get => $this->source->content;
     }
 
-    /**
-     * @var int<0, max>|null
-     *
-     * @throws SourceExceptionInterface may occur when it is not possible to
-     *         read source's data
-     */
-    public ?int $size {
-        get => $this->source->size;
-    }
-
-    /**
-     * @var int<0, max>
-     */
-    public int $offset {
-        get => $this->source->offset;
-
-        /**
-         * @throws SourceExceptionInterface may occur during the inability to
-         *         move the position
-         */
-        set {
-            $this->source->offset = $value;
-        }
-    }
-
-    public bool $isSeekable {
-        get => $this->source->isSeekable;
-    }
-
-    public bool $isEof {
-        /**
-         * @throws SourceExceptionInterface may occur during the inability to
-         *         read the source
-         */
-        get => $this->source->isEof;
-    }
-
     public function __construct(
         /**
          * The virtual file pathname
@@ -121,8 +84,8 @@ class VirtualSource extends Readable implements FileInterface
      * @throws SourceExceptionInterface may occur during the inability to read
      *         the source
      */
-    public function read(int $bytes): string
+    public function read(int $offset, int $bytes): string
     {
-        return $this->source->read($bytes);
+        return $this->source->read($offset, $bytes);
     }
 }
