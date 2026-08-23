@@ -7,9 +7,9 @@ namespace Phplrt\Source;
 use Phplrt\Contracts\Source\Exception\SourceExceptionInterface;
 use Phplrt\Contracts\Source\ReadableInterface;
 use Phplrt\Contracts\Source\SourceFactoryInterface;
+use Phplrt\Source\Driver\ResourceSourceDriver;
 use Phplrt\Source\Driver\SourceDriverInterface;
 use Phplrt\Source\Driver\SplFileInfoSourceDriver;
-use Phplrt\Source\Driver\StreamSourceDriver;
 use Phplrt\Source\Driver\StringSourceDriver;
 use Phplrt\Source\Exception\NotCreatableException;
 
@@ -53,13 +53,16 @@ final readonly class SourceFactory implements SourceFactoryInterface
         return [
             new StringSourceDriver(),
             new SplFileInfoSourceDriver(),
-            new StreamSourceDriver(),
+            new ResourceSourceDriver(),
         ];
     }
 
     /**
      * @api
      *
+     * @template TArgSource
+     * @param TArgSource $source
+     * @return (TArgSource is ReadableInterface ? TArgSource&ReadableInterface : ReadableInterface)
      * @throws NotCreatableException in case none of the drivers recognizes
      *         the source argument
      * @throws SourceExceptionInterface in case of source creation exception occurs

@@ -17,12 +17,16 @@
     ],
     "require": {
         "php": "^8.4",
-        "phplrt/source-contracts": "^4.0"
+        "phplrt/source-contracts": "^4.0",
+        "phplrt/source-factory-contracts": "^4.0"
     },
     "autoload": {
         "psr-4": {
             "Phplrt\\Source\\": "src"
-        }
+        },
+        "files": [
+            "src/polyfill.php"
+        ]
     },
     "require-dev": {
         "phpunit/phpunit": "^13.2",
@@ -34,7 +38,8 @@
         }
     },
     "provide": {
-        "phplrt/source-contracts-implementation": "^4.0"
+        "phplrt/source-contracts-implementation": "^4.0",
+        "phplrt/source-factory-contracts-implementation": "^4.0"
     },
     "extra": {
         "branch-alias": {
